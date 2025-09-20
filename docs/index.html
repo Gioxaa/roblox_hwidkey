@@ -1,0 +1,238 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HWID Licenser API Docs</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      --page-bg: #f6f7fb;
+      --text-color: #1d1d1f;
+      --panel-bg: #ffffff;
+      --panel-shadow: 0 1px 12px rgba(15, 23, 42, 0.1);
+      --code-bg: #f0f2f8;
+      --code-color: inherit;
+      --tag-bg: #dbeafe;
+      --tag-fg: #1d4ed8;
+      --border-color: #d1d5db;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page-bg: #0f1118;
+        --text-color: #e9ecf5;
+        --panel-bg: #161922;
+        --panel-shadow: 0 1px 16px rgba(0, 0, 0, 0.45);
+        --code-bg: #1f2330;
+        --code-color: #f7fafc;
+        --tag-bg: rgba(59, 130, 246, 0.22);
+        --tag-fg: #93c5fd;
+        --border-color: rgba(255, 255, 255, 0.08);
+      }
+    }
+    body {
+      margin: 0;
+      padding: 2.5rem 1.5rem 3rem;
+      max-width: 960px;
+      margin-inline: auto;
+      background: var(--page-bg);
+      color: var(--text-color);
+    }
+    header, section {
+      background: var(--panel-bg);
+      padding: 1.75rem 2rem;
+      border-radius: 14px;
+      box-shadow: var(--panel-shadow);
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+    }
+    header h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2rem;
+    }
+    header p {
+      margin: 0;
+      max-width: 60ch;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.35rem;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-color);
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 0.95rem;
+    }
+    code {
+      font-family: "Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      background: var(--code-bg);
+      color: var(--code-color);
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+    }
+    ul {
+      padding-left: 1.1rem;
+    }
+    .endpoint {
+      border-left: 4px solid #2563eb;
+      padding-left: 1rem;
+      margin: 1rem 0 1.75rem;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--tag-bg);
+      color: var(--tag-fg);
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      margin-right: 0.35rem;
+    }
+    .method {
+      display: inline-block;
+      font-weight: 700;
+      margin-right: 0.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.75rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+    th {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HWID Licenser API</h1>
+    <p>RESTful service for issuing, verifying, and revoking RS256 JWT licenses bound to hardware identifiers. Deploy on Node.js 18+ with npm, store revocation info on the filesystem, and guard admin access using HTTP Basic + bcrypt.</p>
+  </header>
+
+  <section>
+    <h2>Getting Started</h2>
+    <ol>
+      <li>Generate RSA keys:</li>
+    </ol>
+    <pre><code>mkdir -p keys data/logs
+openssl genrsa -out keys/private.pem 2048
+openssl rsa -in keys/private.pem -pubout -out keys/public.pem</code></pre>
+    <ol start="2">
+      <li>Create your environment file:</li>
+    </ol>
+    <pre><code>cp .env.example .env</code></pre>
+    <p>Update <code>.env</code> with admin credentials, JWT metadata, rate limiting, trust proxy mode, and key paths. Install dependencies and start:</p>
+    <pre><code>npm install
+npm start</code></pre>
+    <p>Default listener: <code>http://localhost:4000</code>. Override with <code>PORT</code>.</p>
+  </section>
+
+  <section>
+    <h2>Authentication</h2>
+    <p>Admin endpoints require HTTP Basic Auth using <code>ADMIN_USER</code> and <code>ADMIN_PASS</code>. Plaintext passwords from the environment are hashed with bcrypt on boot and never persisted.</p>
+  </section>
+
+  <section>
+    <h2>Endpoints</h2>
+
+    <div class="endpoint">
+      <span class="tag">Public</span>
+      <span class="method">GET</span>
+      <code>/healthz</code>
+      <p>Health probe; returns <code>{ "status": "ok" }</code>.</p>
+    </div>
+
+    <div class="endpoint">
+      <span class="tag">Admin</span>
+      <span class="method">POST</span>
+      <code>/issue</code>
+      <p>Issue a new license token bound to a hardware ID.</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>hwid</code></td><td>string</td><td>Required. ≤256 characters.</td></tr>
+          <tr><td><code>ttlSeconds</code></td><td>number</td><td>Required. 60–5,184,000 seconds.</td></tr>
+          <tr><td><code>plan</code></td><td>string</td><td>Optional plan label.</td></tr>
+          <tr><td><code>note</code></td><td>string</td><td>Optional operator note.</td></tr>
+        </tbody>
+      </table>
+      <p>Response:</p>
+      <pre><code>{
+  "token": "&lt;JWT_RS256&gt;",
+  "jti": "uuid",
+  "exp": 1700000000
+}</code></pre>
+      <p>Logs append to <code>data/logs/issued.jsonl</code> with timestamp, IP, JTI, HWID, plan, exp, and note.</p>
+      <p>Example:</p>
+      <pre><code>curl -u "admin:changeme" \
+  -H "Content-Type: application/json" \
+  -d '{"hwid":"DESKTOP-ABC123","ttlSeconds":3600,"plan":"pro","note":"trial"}' \
+  http://localhost:4000/issue</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <span class="tag">Public</span>
+      <span class="method">POST</span>
+      <code>/verify</code>
+      <p>Validate a JWT license for the supplied hardware ID.</p>
+      <p>Request:</p>
+      <pre><code>{ "token": "&lt;JWT&gt;", "hwid": "DESKTOP-ABC123" }</code></pre>
+      <p>Responses:</p>
+      <pre><code>{ "ok": true, "plan": "pro", "exp": 1700000000 }
+{ "ok": false, "reason": "invalid_or_expired" }
+{ "ok": false, "reason": "hwid_mismatch" }
+{ "ok": false, "reason": "revoked" }</code></pre>
+      <p>Checks: RS256 signature, <code>iss</code>, <code>aud</code>, <code>sub === "license"</code>, <code>exp</code>, HWID equality, and revocation list.</p>
+    </div>
+
+    <div class="endpoint">
+      <span class="tag">Admin</span>
+      <span class="method">POST</span>
+      <code>/revoke</code>
+      <p>Revoke a license by JTI.</p>
+      <pre><code>{ "jti": "c1345bf0-..." }</code></pre>
+      <p>Persists the ID to <code>data/revoked.json</code> (atomic write) and logs <code>data/logs/revoked.jsonl</code>.</p>
+    </div>
+
+    <div class="endpoint">
+      <span class="tag">Public</span>
+      <span class="method">GET</span>
+      <code>/status/:jti</code>
+      <p>Returns <code>{ "revoked": true | false }</code> for a given license ID.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Offline Verification</h2>
+    <p>Share <code>keys/public.pem</code> with clients for local token validation. Use the bundled helper:</p>
+    <pre><code>node verify-offline.js "&lt;TOKEN&gt;" "DESKTOP-ABC123"</code></pre>
+    <p>The script enforces signature, <code>iss</code>/<code>aud</code>, subject, and HWID match.</p>
+  </section>
+
+  <section>
+    <h2>Operational Notes</h2>
+    <ul>
+      <li>Terminate TLS at a reverse proxy and align the server's <code>TRUST_PROXY</code> setting with your proxy hop count or CIDR.</li>
+      <li>Rotate RSA keys periodically; update <code>JWT_KID</code> to signal consumers.</li>
+      <li>Protect <code>keys/</code> and <code>data/</code> with restrictive filesystem permissions.</li>
+      <li>Ship JSONL audit logs to monitoring or SIEM tooling for traceability.</li>
+    </ul>
+  </section>
+</body>
+</html>
