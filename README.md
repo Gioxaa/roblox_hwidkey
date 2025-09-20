@@ -10,6 +10,7 @@ Pure Node.js/Express service for issuing and validating RS256 JWT license tokens
 - Admin-only endpoints secured by HTTP Basic Auth + bcrypt
 - Global rate limiting and request slowdown to mitigate brute-force abuse
 - Optional offline verification helper (`verify-offline.js`)
+- Optional Discord bot with slash commands, modals, and secure token reveal
 
 ## Prerequisites
 - Node.js 18 or newer
@@ -44,6 +45,7 @@ See `.env.example` for all options. Key entries:
 - `RATE_MAX_PER_MIN`, `SLOW_AFTER_PER_MIN`, `SLOW_DELAY_MS`: Global rate limiter and slowdown settings.
 - `TRUST_PROXY`: Express trust proxy mode. Default `loopback`. Set to `false` for single-host setups or configure to match your reverse proxy hops.
 - `CORS_ORIGINS`: Comma-separated allowlist or `*` for open access.
+- Discord bot (optional): `INCLUDE_DISCORD_BOT`, `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `ISSUER_BASE_URL`, `ISSUER_BASIC_USER`, `ISSUER_BASIC_PASS`.
 
 ## Endpoints
 All endpoints accept/return JSON unless noted.
@@ -145,6 +147,20 @@ node verify-offline.js "<TOKEN>" "<HWID>"
 ```
 Outputs JSON describing the validation result.
 
+## Discord Bot (Optional)
+Set up the bot if you want to manage licenses from Discord:
+1. Fill the Discord-related variables in `.env` and set `INCLUDE_DISCORD_BOT=true`.
+2. `DISCORD_TOKEN`: Bot token from the Discord Developer Portal.
+3. `DISCORD_CLIENT_ID`: Application ID. Optional `DISCORD_GUILD_ID` registers commands instantly in a single guild.
+4. `ISSUER_BASE_URL`: Base URL to reach this API (for example `http://localhost:4000`).
+5. `ISSUER_BASIC_USER` / `ISSUER_BASIC_PASS`: Credentials the bot will send to `/issue` and `/revoke` (can match the admin account).
+6. Run the bot alongside the API: `npm run bot`.
+
+Commands are slash based with modals for input:
+- `/issue`: Opens a modal requesting HWID, TTL, plan, and note. The bot replies ephemerally with the license metadata and a button to reveal the full token (cached for five minutes).
+- `/revoke`: Modal for the license JTI, then revokes and logs.
+- `/status`: Modal for JTI to display whether the license is active or revoked.
+
 ## Logs & Persistence
 - Revoked IDs: `data/revoked.json` (sorted array, updated atomically)
 - Issuance log: `data/logs/issued.jsonl`
@@ -158,5 +174,5 @@ Logs are append-only JSON lines suitable for log ingestion. Protect the `keys/` 
 - Rotate the RSA key pair periodically and update `JWT_KID` to signal new keys.
 - Monitor audit logs and revocation file for tampering; consider off-box backups.
 
-## Optional Discord Bot
-Set `INCLUDE_DISCORD_BOT=true` and install `discord.js` if you want to extend the service with a slash-command bot. (Not included by default in this project scaffold.)
+## Optional Discord Bot Source
+Run `npm run bot` to start the bot, or leave `INCLUDE_DISCORD_BOT=false` to skip loading `discord.js` entirely.

@@ -120,7 +120,7 @@
 <body>
   <header>
     <h1>HWID Licenser API</h1>
-    <p>RESTful service for issuing, verifying, and revoking RS256 JWT licenses bound to hardware identifiers. Deploy on Node.js 18+ with npm, store revocation info on the filesystem, and guard admin access using HTTP Basic + bcrypt.</p>
+    <p>RESTful service for issuing, verifying, and revoking RS256 JWT licenses bound to hardware identifiers. Deploy on Node.js 18+ with npm, store revocation info on the filesystem, guard admin access using HTTP Basic + bcrypt, and optionally manage licenses from Discord.</p>
   </header>
 
   <section>
@@ -174,7 +174,7 @@ npm start</code></pre>
       </table>
       <p>Response:</p>
       <pre><code>{
-  "token": "&lt;JWT_RS256&gt;",
+  "token": "<JWT_RS256>",
   "jti": "uuid",
   "exp": 1700000000
 }</code></pre>
@@ -192,7 +192,7 @@ npm start</code></pre>
       <code>/verify</code>
       <p>Validate a JWT license for the supplied hardware ID.</p>
       <p>Request:</p>
-      <pre><code>{ "token": "&lt;JWT&gt;", "hwid": "DESKTOP-ABC123" }</code></pre>
+      <pre><code>{ "token": "<JWT>", "hwid": "DESKTOP-ABC123" }</code></pre>
       <p>Responses:</p>
       <pre><code>{ "ok": true, "plan": "pro", "exp": 1700000000 }
 { "ok": false, "reason": "invalid_or_expired" }
@@ -221,8 +221,25 @@ npm start</code></pre>
   <section>
     <h2>Offline Verification</h2>
     <p>Share <code>keys/public.pem</code> with clients for local token validation. Use the bundled helper:</p>
-    <pre><code>node verify-offline.js "&lt;TOKEN&gt;" "DESKTOP-ABC123"</code></pre>
+    <pre><code>node verify-offline.js "<TOKEN>" "DESKTOP-ABC123"</code></pre>
     <p>The script enforces signature, <code>iss</code>/<code>aud</code>, subject, and HWID match.</p>
+  </section>
+
+  <section>
+    <h2>Discord Bot (Optional)</h2>
+    <p>Enable the bot by setting <code>INCLUDE_DISCORD_BOT=true</code> in <code>.env</code> and providing:</p>
+    <ul>
+      <li><code>DISCORD_TOKEN</code> and <code>DISCORD_CLIENT_ID</code> from the Developer Portal.</li>
+      <li><code>DISCORD_GUILD_ID</code> for instant command registration (optional, otherwise commands register globally).</li>
+      <li><code>ISSUER_BASE_URL</code> pointing to this API (for example <code>http://localhost:4000</code>).</li>
+      <li><code>ISSUER_BASIC_USER</code> and <code>ISSUER_BASIC_PASS</code> used for Basic Auth when calling <code>/issue</code> and <code>/revoke</code>.</li>
+    </ul>
+    <p>Launch with <code>npm run bot</code>. Slash commands open interactive modals:</p>
+    <ul>
+      <li><code>/issue</code> &mdash; collect HWID, TTL, plan, note. Replies ephemerally with metadata and a button to reveal the full token (available for five minutes).</li>
+      <li><code>/revoke</code> &mdash; modal for the JTI, then revokes the license and clears cache.</li>
+      <li><code>/status</code> &mdash; modal for the JTI, returns whether the license is active or revoked.</li>
+    </ul>
   </section>
 
   <section>
